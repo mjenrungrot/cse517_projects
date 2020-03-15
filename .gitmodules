@@ -1,0 +1,3 @@
+[submodule "documentIntent_emnlp19"]
+	path = documentIntent_emnlp19
+	url = https://github.com/karansikka1/documentIntent_emnlp19

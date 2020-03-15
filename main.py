@@ -51,38 +51,14 @@ def main(args: argparse.Namespace):
     # Set up torch device
     if 'cuda' in args.device and torch.cuda.is_available():
         device = torch.device(args.device)
-        kwargs = {'pin_memory': False}
+        kwargs = {'pin_memory': True}
     else:
         device = torch.device('cpu')
         kwargs = {}
 
     # Set up number of workers
     num_workers = min(multiprocessing.cpu_count(), args.num_workers)
-
-    # Set up data loaders differently based on the task
-    # TODO: Extend to ELMo + word2vec etc.
-    # if args.type == 'image_only':
-    #     train_dataset = ImageOnlyDataset(train_posts, labels) # TODO: fix
-    #     val_dataset = ImageOnlyDataset(val_posts, labels)
-    # elif args.type == 'image_text':
-    #     train_dataset = ElmoImageTextDataset(train_posts, labels, dictionary)
-    #     val_dataset = ElmoImageTextDataset(val_posts, labels, dictionary)
-    # elif args.type == 'text_only':
-    #     train_dataset = ElmoTextOnlyDataset(train_posts, labels, dictionary)
-    #     val_dataset = ElmoTextOnlyDataset(val_posts, labels, dictionary)
-
-    # train_data_loader = torch.utils.data.DataLoader(train_dataset,
-    #                                                 batch_size=1,
-    #                                                 shuffle=args.shuffle,
-    #                                                 #num_workers=0,
-    #                                                 #collate_fn=collate_fn_pad,
-    #                                                 **kwargs)
-    # val_data_loader = torch.utils.data.DataLoader(val_dataset,
-    #                                               batch_size=1,
-    #                                               #num_workers=1,
-    #                                               #collate_fn=collate_fn_pad,
-    #                                               **kwargs)
-
+    
     if args.type == 'image_only':
         train_dataset = ImageOnlyDataset(train_posts, labels)
         val_dataset = ImageOnlyDataset(val_posts, labels)
@@ -93,10 +69,10 @@ def main(args: argparse.Namespace):
                                                         collate_fn=collate_fn_pad_image_only,
                                                         **kwargs)
         val_data_loader = torch.utils.data.DataLoader(val_dataset,
-                                                    batch_size=1,
-                                                    num_workers=num_workers,
-                                                    collate_fn=collate_fn_pad_image_only,
-                                                    **kwargs)
+                                                      batch_size=1,
+                                                      num_workers=num_workers,
+                                                      collate_fn=collate_fn_pad_image_only,
+                                                      **kwargs)
     elif args.type == 'image_text':
         train_dataset = ImageTextDataset(train_posts, labels, dictionary)
         val_dataset = ImageTextDataset(val_posts, labels, dictionary)
@@ -130,22 +106,22 @@ def main(args: argparse.Namespace):
         train_dataset = ElmoTextOnlyDataset(train_posts, labels, dictionary)
         val_dataset = ElmoTextOnlyDataset(val_posts, labels, dictionary)
         train_data_loader = torch.utils.data.DataLoader(train_dataset,
-                                                    batch_size=1,
-                                                    shuffle=args.shuffle,
-                                                    **kwargs)
+                                                        batch_size=1,
+                                                        shuffle=args.shuffle,
+                                                        **kwargs)
         val_data_loader = torch.utils.data.DataLoader(val_dataset,
-                                                  batch_size=1,
-                                                  **kwargs)
+                                                      batch_size=1,
+                                                      **kwargs)
     elif args.type == 'elmo_image_text':
         train_dataset = ElmoImageTextDataset(train_posts, labels, dictionary)
         val_dataset = ElmoImageTextDataset(val_posts, labels, dictionary)
         train_data_loader = torch.utils.data.DataLoader(train_dataset,
-                                                    batch_size=1,
-                                                    shuffle=args.shuffle,
-                                                    **kwargs)
+                                                        batch_size=1,
+                                                        shuffle=args.shuffle,
+                                                        **kwargs)
         val_data_loader = torch.utils.data.DataLoader(val_dataset,
-                                                  batch_size=1,
-                                                  **kwargs)
+                                                      batch_size=1,
+                                                      **kwargs)
 
     # Set up the model
     model = Model(vocab_size=dictionary.size()).to(device)
@@ -231,7 +207,7 @@ def main(args: argparse.Namespace):
                     if loss is None:
                         loss = loss_batch[key]
                     else:
-                        loss += loss_bath[key] 
+                        loss += loss_batch[key] 
 
                 total_loss += loss.item()
 
@@ -331,16 +307,3 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', type=str, default='./outputs', help="Output directory")
     print(parser.parse_args())
     main(parser.parse_args())
-
-"""
-python main.py --image_only \
-    ./documentIntent_emnlp19/splits/train_split_0.json \
-    ./documentIntent_emnlp19/splits/val_split_0.json \
-    ./documentIntent_emnlp19/labels/intent_labels.json \
-    ./documentIntent_emnlp19/labels/semiotic_labels.json \
-    ./documentIntent_emnlp19/labels/contextual_labels.json \
-    --name intent_split0 \
-    --log_dir ./logs \
-    --device cuda:1 \
-    --tensorboard
-""" # pylint: disable=pointless-string-statement

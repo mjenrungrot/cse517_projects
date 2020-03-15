@@ -1,6 +1,5 @@
 outputs/
 logs/
-documentIntent_emnlp19/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

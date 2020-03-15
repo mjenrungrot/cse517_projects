@@ -98,12 +98,12 @@ class Model(torch.nn.Module):
             vocab_size (int) - Size of the dictionary
             token_embedding_size (int) - Dimension of the token embedding
             context_size (int) - Size of surrounding contexts of the word
-            image_network_type
-            caption_network_type
-            joint_embedding_size
-            intent_dims
-            semiotic_dims
-            contextual_dims
+            image_network_type (str) - Choice of the network for image encoding (default: identity)
+            caption_network_type (str) - Choice of the network for caption encoding (default: ELMo)
+            joint_embedding_size (int) - Dimension of the joint embedding
+            intent_dims (int) - Number of intent class outputs
+            semiotic_dims (int) - Number of semiotic class outputs
+            contextual_dims (int) - Number of contextual class outputs
         """
         super().__init__()
         self.vocab_size = vocab_size
@@ -164,7 +164,7 @@ class Model(torch.nn.Module):
         if x_caption is not None:
             # Get a text embedding           
             if self.caption_network_type == "ELMo":
-                x_caption = x_caption.view(1,x_caption.size()[2],-1)
+                x_caption = x_caption.view(1, x_caption.size()[2], -1)
             else:
                 x_caption = self.caption_network(x_caption) # (batch_size, caption_length, word_embedding_dim)
             # Get a text embedding
@@ -172,9 +172,7 @@ class Model(torch.nn.Module):
             # Iterate over the caption
             caption_length = x_caption.size(1)
             hidden = torch.zeros(1, x_caption.size(0), self.token_embedding_size).to(x_caption.device)
-            out = torch.zeros(1, x_caption.size(0), self.token_embedding_size).to(x_caption.device)
             for t in range(caption_length):
-                # x_caption_combined = torch.cat((hidden, x_caption[:, t, :]), dim=1)
                 _, hidden = self.caption_GRU(torch.unsqueeze(x_caption[:, t, :], 0), hidden)
             hidden = torch.squeeze(hidden)
 

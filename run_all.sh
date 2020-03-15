@@ -1,7 +1,7 @@
-device="cuda:1"
+device="cuda:0"
 log_dir="./logs"
 
-for type in image_text text_only image_only
+for type in image_text text_only image_only elmo_image_text elmo_text_only
 do
     for classification in intent semiotic contextual
     do

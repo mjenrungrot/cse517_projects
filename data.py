@@ -6,13 +6,12 @@ from nltk.tokenize.treebank import TreebankWordTokenizer
 from allennlp.modules.elmo import Elmo, batch_to_ids
 UNK_TOKEN = '<UNK>'
 
-
 if torch.cuda.is_available():
     device = torch.device('cuda')
     kwargs = {'pin_memory': True}
 else:
     device = torch.device('cpu')
-    #kwargs = {}
+    kwargs = {}
     
 class Dictionary:
     def __init__(self, tokenizer_method: str = "TreebankWordTokenizer"):
@@ -134,17 +133,11 @@ class ElmoImageTextDataset(torch.utils.data.Dataset):
                 self.posts[post_id]['label'][label] = self.labels_map[label][self.posts[post_id]['label'][label]]
 
             # Convert caption to list of token indices
-            #tokenized_captions = self.dictionary.tokenizer.tokenize(self.posts[post_id]['caption'])
-            #self.posts[post_id]['caption'] = list(map(self.dictionary.lookup_token, tokenized_captions))
             self.posts[post_id]['caption'] += '.'
-            #print(i, "self.post caption: ", self.posts[post_id]['caption'])
             character_ids = batch_to_ids([self.posts[post_id]['caption'].split(" ")])
             character_ids = character_ids.to(device) # (len(batch), max sentence length, max word length).
-            #print("self.character_ids: ", character_ids.cpu())
             x = self.elmo(character_ids) 
             self.posts[post_id]['caption'] = x['elmo_representations'][0]
-            #print (x['elmo_representations'][0].size())
-            #print(self.posts[post_id]['caption'])
             i += 1
 
     def __len__(self) -> int:
@@ -152,8 +145,6 @@ class ElmoImageTextDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, i: int) -> Dict[str, Any]:
         output = self.posts[i]
-        #output['caption'] = torch.LongTensor(output['caption'])
-        #output['image'] = torch.from_numpy(output['image']) # pylint: disable=undefined-variable, no-member
         return output
 
 class ImageOnlyDataset(torch.utils.data.Dataset):
@@ -197,8 +188,6 @@ class ElmoTextOnlyDataset(torch.utils.data.Dataset):
                 self.posts[post_id]['label'][label] = self.labels_map[label][self.posts[post_id]['label'][label]]
 
             # Convert caption to list of token indices
-            # tokenized_captions = self.dictionary.tokenizer.tokenize(self.posts[post_id]['caption'])
-            # self.posts[post_id]['caption'] = list(map(self.dictionary.lookup_token, tokenized_captions))
             self.posts[post_id]['caption'] += '.'
             character_ids = batch_to_ids([self.posts[post_id]['caption'].split(" ")])
             character_ids = character_ids.to(device) # (len(batch), max sentence length, max word length).
@@ -210,7 +199,6 @@ class ElmoTextOnlyDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, i: int) -> Dict[str, Any]:
         output = self.posts[i]
-        # output['caption'] = torch.LongTensor(output['caption'])
         return output
  
 

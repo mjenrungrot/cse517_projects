@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import torch.utils.tensorboard as tensorboard
 
-from data import Dictionary, ImageOnlyDataset, ImageTextDataset, TextOnlyDataset, \
+from data import Dictionary, ImageOnlyDataset, ImageTextDataset, TextOnlyDataset, ElmoImageTextDataset, ElmoTextOnlyDataset,\
                  collate_fn_pad_image_text, collate_fn_pad_image_only, collate_fn_pad_text_only
 from network import Model
 
@@ -51,7 +51,7 @@ def main(args: argparse.Namespace):
     # Set up torch device
     if 'cuda' in args.device and torch.cuda.is_available():
         device = torch.device(args.device)
-        kwargs = {'pin_memory': True}
+        kwargs = {'pin_memory': False}
     else:
         device = torch.device('cpu')
         kwargs = {}
@@ -61,6 +61,28 @@ def main(args: argparse.Namespace):
 
     # Set up data loaders differently based on the task
     # TODO: Extend to ELMo + word2vec etc.
+    # if args.type == 'image_only':
+    #     train_dataset = ImageOnlyDataset(train_posts, labels) # TODO: fix
+    #     val_dataset = ImageOnlyDataset(val_posts, labels)
+    # elif args.type == 'image_text':
+    #     train_dataset = ElmoImageTextDataset(train_posts, labels, dictionary)
+    #     val_dataset = ElmoImageTextDataset(val_posts, labels, dictionary)
+    # elif args.type == 'text_only':
+    #     train_dataset = ElmoTextOnlyDataset(train_posts, labels, dictionary)
+    #     val_dataset = ElmoTextOnlyDataset(val_posts, labels, dictionary)
+
+    # train_data_loader = torch.utils.data.DataLoader(train_dataset,
+    #                                                 batch_size=1,
+    #                                                 shuffle=args.shuffle,
+    #                                                 #num_workers=0,
+    #                                                 #collate_fn=collate_fn_pad,
+    #                                                 **kwargs)
+    # val_data_loader = torch.utils.data.DataLoader(val_dataset,
+    #                                               batch_size=1,
+    #                                               #num_workers=1,
+    #                                               #collate_fn=collate_fn_pad,
+    #                                               **kwargs)
+
     if args.type == 'image_only':
         train_dataset = ImageOnlyDataset(train_posts, labels)
         val_dataset = ImageOnlyDataset(val_posts, labels)
@@ -104,8 +126,31 @@ def main(args: argparse.Namespace):
                                                     collate_fn=collate_fn_pad_text_only,
                                                     **kwargs)
 
+    elif args.type == 'elmo_text_only':
+        train_dataset = ElmoTextOnlyDataset(train_posts, labels, dictionary)
+        val_dataset = ElmoTextOnlyDataset(val_posts, labels, dictionary)
+        train_data_loader = torch.utils.data.DataLoader(train_dataset,
+                                                    batch_size=1,
+                                                    shuffle=args.shuffle,
+                                                    **kwargs)
+        val_data_loader = torch.utils.data.DataLoader(val_dataset,
+                                                  batch_size=1,
+                                                  **kwargs)
+    elif args.type == 'elmo_image_text':
+        train_dataset = ElmoImageTextDataset(train_posts, labels, dictionary)
+        val_dataset = ElmoImageTextDataset(val_posts, labels, dictionary)
+        train_data_loader = torch.utils.data.DataLoader(train_dataset,
+                                                    batch_size=1,
+                                                    shuffle=args.shuffle,
+                                                    **kwargs)
+        val_data_loader = torch.utils.data.DataLoader(val_dataset,
+                                                  batch_size=1,
+                                                  **kwargs)
+
     # Set up the model
     model = Model(vocab_size=dictionary.size()).to(device)
+    if args.type in ['elmo_text_only', 'elmo_image_text']:
+        model = Model(vocab_size=dictionary.size(), caption_network_type = "ELMo").to(device)    
 
     # Set up an optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -161,7 +206,7 @@ def main(args: argparse.Namespace):
                     image_data = batch['image'].to(device)
                 label_batch = {}
                 for key in keys:
-                    label_batch[key] = batch['label'][key].to(device)
+                    label_batch[key] = torch.LongTensor(batch['label'][key]).to(device)
                     
                 if mode == "train":
                     model.zero_grad()
@@ -191,7 +236,7 @@ def main(args: argparse.Namespace):
                 total_loss += loss.item()
 
                 if mode == "train":
-                    loss.backward()
+                    loss.backward(retain_graph=True)
                     optimizer.step()
 
             # Terminate the progress bar
@@ -257,6 +302,7 @@ def main(args: argparse.Namespace):
         'scheduler_state_dict': scheduler.state_dict(),
     }, Path(args.output_dir) / '{}.pt'.format(args.name))
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog="Instagram Intent Classifier")
     parser.add_argument('train_metadata', type=str, help="Path to training metadata")
@@ -268,6 +314,8 @@ if __name__ == '__main__':
     group.add_argument('--image_only', dest='type', action='store_const', const='image_only')
     group.add_argument('--image_text', dest='type', action='store_const', const='image_text')
     group.add_argument('--text_only', dest='type', action='store_const', const='text_only')
+    group.add_argument('--elmo_image_text', dest='type', action='store_const', const='elmo_image_text')
+    group.add_argument('--elmo_text_only', dest='type', action='store_const', const='elmo_text_only')
     parser.add_argument('--classification', type=str, required=True, help="Type of loss function to optimize for")
     parser.add_argument('--name', type=str, default='reproduce_experiment', help="Name of the experiment")
     parser.add_argument('--epochs', type=int, default=70, help="Number of epochs")

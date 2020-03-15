@@ -37,7 +37,6 @@ class CBOW(torch.nn.Module):
     def __init__(self, vocab_size: int, embedding_size: int = 300, context_size: int = 2):
         """
         Constructor
-
         Args:
             vocab_size (int) - Size of the dictionary
             embedding_size (int) - Dimension of the token embedding
@@ -52,7 +51,6 @@ class CBOW(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor: # pylint: disable=arguments-differ
         """
         Forward pass
-
         Args:
             x (torch.Tensor) - Input tensor
         """
@@ -76,8 +74,9 @@ class CBOW(torch.nn.Module):
         out = out.view(nbatch, lseq, context_size*2)
         
         out = torch.sum(self.embedding_layer(out), dim=1)
-        return out    
-    
+
+        return out  
+      
 class Model(torch.nn.Module):
     """
     Model class
@@ -129,7 +128,8 @@ class Model(torch.nn.Module):
         elif self.caption_network_type == "CBOW":
             self.caption_network = CBOW(self.vocab_size, self.token_embedding_size, self.context_size)
         elif self.caption_network_type == "ELMo":
-            raise NotImplementedError
+            self.caption_network = word2vec(self.vocab_size, self.token_embedding_size)
+            self.token_embedding_size = 1024
         else:
             raise NotImplementedError("caption_network_type = {} not available".format(self.caption_network_type))
 
@@ -162,9 +162,13 @@ class Model(torch.nn.Module):
             x_img_joint_embedding = torch.zeros((x_caption.shape[0], self.joint_embedding_size), device=x_caption.device)
 
         if x_caption is not None:
+            # Get a text embedding           
+            if self.caption_network_type == "ELMo":
+                x_caption = x_caption.view(1,x_caption.size()[2],-1)
+            else:
+                x_caption = self.caption_network(x_caption) # (batch_size, caption_length, word_embedding_dim)
             # Get a text embedding
             x_caption = self.caption_network(x_caption) # (batch_size, caption_length, word_embedding_dim)
-
             # Iterate over the caption
             caption_length = x_caption.size(1)
             hidden = torch.zeros(1, x_caption.size(0), self.token_embedding_size).to(x_caption.device)

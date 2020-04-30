@@ -1,5 +1,7 @@
 ## Reproducing EMNLP 2019 _Integrating Text and Image: Determining Multimodal Document Intent in Instagram Posts_
 
+See our writeup ![here](writeup.pdf).
+
 This project is to reproduce a paper entitled _Integrating Text and Image: Determining Multimodal Document Intent in Instagram Posts_ from EMNLP 2019. The project is a part of final project for CSE 517 Natural Language Processing (Winter 2020), offered at the University of Washington, Seattle.
 
 ## Installation
